@@ -1,0 +1,11 @@
+{
+	"id": "dragToScroll",
+	"name": "Drag To Scroll",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Adds drag-to-scroll functionality to Obsidian. Hold the right mouse button and drag to scroll — just like on a touch device. Works in both Edit and Reading modes, inspired by PDF viewers and design tools.",
+	"author": "Constantine Sazonov",
+	"authorUrl": "https://constantinesazonov.com",
+	"fundingUrl": "https://constantinesazonov.com",
+	"isDesktopOnly": false
+}
