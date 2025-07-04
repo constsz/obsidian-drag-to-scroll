@@ -1,9 +1,9 @@
 {
-	"id": "dragToScroll",
+	"id": "drag-to-scroll",
 	"name": "Drag To Scroll",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Adds drag-to-scroll functionality to Obsidian on Desktop, just like on a touch device.",
+	"description": "Adds drag to scroll functionality, just like on a touch device.",
 	"author": "Constantine Sazonov",
 	"authorUrl": "https://constantinesazonov.com",
 	"fundingUrl": "https://constantinesazonov.com",
