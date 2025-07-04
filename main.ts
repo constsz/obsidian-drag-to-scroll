@@ -1,56 +1,81 @@
-import { Plugin, MarkdownView } from 'obsidian';
+import { App, MarkdownView, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
+// 1. Define the interface for our settings
+interface DragToScrollSettings {
+    mouseButton: number;
+    modifierKey: 'none' | 'ctrl' | 'shift' | 'alt';
+    friction: number;
+}
+
+// 2. Set the default values for the settings
+const DEFAULT_SETTINGS: DragToScrollSettings = {
+    mouseButton: 2, // 0:LMB, 1:MMB, 2:RMB
+    modifierKey: 'none',
+    friction: 0.92,
+}
+
+// This is our main plugin class
 export default class DragToScrollPlugin extends Plugin {
+    settings: DragToScrollSettings;
+
     isDragging: boolean = false;
     startY: number = 0;
     didDrag: boolean = false;
-
-    // A small movement threshold to distinguish a click from a drag
+    lastVelocityY: number = 0;
+    animationFrameId: number | null = null;
+    
     private readonly DRAG_THRESHOLD = 5;
 
     async onload() {
-        console.log('Loading Drag to Scroll plugin');
+        await this.loadSettings();
+        this.addSettingTab(new DragToScrollSettingTab(this.app, this));
 
+        console.log('Loading Drag to Scroll plugin');
+        
         this.registerDomEvent(document, 'mousedown', this.handleMouseDown);
         this.registerDomEvent(document, 'mousemove', this.handleMouseMove);
         this.registerDomEvent(document, 'mouseup', this.handleMouseUp);
-        
-        // Use the 'capture' phase to reliably prevent the context menu
         this.registerDomEvent(document, 'contextmenu', this.handleContextMenu, { capture: true });
     }
 
     onunload() {
         console.log('Unloading Drag to Scroll plugin');
-        // Reset cursor just in case the plugin is disabled mid-drag
         document.body.style.cursor = 'default';
+        this.stopInertiaScroll();
     }
 
-    /**
-     * Finds the correct scrollable element by first checking the view's mode 
-     * ('source' vs 'preview') and then running the specific query for that mode.
-     * This prevents conflicts in Live Preview where both selectors might exist.
-     */
+    async loadSettings() {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
+	}
+
     getScrollableElement = (): HTMLElement | null => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) return null;
-
         const mode = view.getMode();
         const container = view.containerEl;
-
-        if (mode === 'source') { // Handles Live Preview and Source Mode
-            return container.querySelector<HTMLElement>('.cm-scroller');
-        }
-        
-        if (mode === 'preview') { // Handles Reading Mode
-            return container.querySelector<HTMLElement>('.markdown-preview-view');
-        }
-
-        return null; // Fallback
+        if (mode === 'source') return container.querySelector<HTMLElement>('.cm-scroller');
+        if (mode === 'preview') return container.querySelector<HTMLElement>('.markdown-preview-view');
+        return null;
     }
     
     handleMouseDown = (evt: MouseEvent) => {
-        if (evt.button !== 2) return;
+        if (evt.button !== this.settings.mouseButton) return;
 
+        const mod = this.settings.modifierKey;
+        const isModKeyPressed = evt.ctrlKey || evt.altKey || evt.shiftKey;
+
+        if ((mod === 'ctrl' && !evt.ctrlKey) ||
+            (mod === 'shift' && !evt.shiftKey) ||
+            (mod === 'alt' && !evt.altKey) ||
+            (mod === 'none' && isModKeyPressed)) {
+            return;
+        }
+
+        this.stopInertiaScroll();
         const targetElement = evt.target as HTMLElement;
         if (!targetElement.closest('.workspace-leaf-content')) return;
         
@@ -60,13 +85,12 @@ export default class DragToScrollPlugin extends Plugin {
         this.isDragging = true;
         this.startY = evt.clientY;
         this.didDrag = false; 
-        
+        this.lastVelocityY = 0; 
         evt.preventDefault();
     };
 
     handleMouseMove = (evt: MouseEvent) => {
         if (!this.isDragging) return;
-
         const scrollableEl = this.getScrollableElement();
         if (!scrollableEl) return;
 
@@ -79,27 +103,118 @@ export default class DragToScrollPlugin extends Plugin {
         
         if (this.didDrag) {
             const deltaY = evt.clientY - this.startY;
-            // Touch-like scroll direction
-            scrollableEl.scrollBy(0, -deltaY);
+            const scrollAmount = -deltaY;
+            scrollableEl.scrollBy(0, scrollAmount);
+            this.lastVelocityY = scrollAmount;
             this.startY = evt.clientY;
         }
     };
 
     handleMouseUp = (evt: MouseEvent) => {
-        if (evt.button !== 2 || !this.isDragging) return;
+        if (evt.button !== this.settings.mouseButton || !this.isDragging) return;
         
         this.isDragging = false;
         
         if (this.didDrag) {
             document.body.style.cursor = 'default';
+            this.startInertiaScroll();
         }
     };
 
     handleContextMenu = (evt: MouseEvent) => {
+        // If a drag just occurred...
         if (this.didDrag) {
-            evt.preventDefault();
-            evt.stopImmediatePropagation();
+            // ...and it was a right-click drag, prevent the context menu.
+            if (this.settings.mouseButton === 2) {
+                evt.preventDefault();
+                evt.stopImmediatePropagation();
+            }
+            // Always reset the drag flag after processing a drag action,
+            // regardless of which mouse button was used.
             this.didDrag = false;
         }
     };
+
+    startInertiaScroll = () => {
+        if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+        this.animationFrameId = requestAnimationFrame(this.inertiaStep);
+    }
+
+    stopInertiaScroll = () => {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+        this.lastVelocityY = 0;
+    }
+
+    inertiaStep = () => {
+        const scrollableEl = this.getScrollableElement();
+        // Stop if velocity is negligible or the element is gone
+        if (!scrollableEl || Math.abs(this.lastVelocityY) < 1) {
+            this.stopInertiaScroll();
+            return;
+        }
+        
+        scrollableEl.scrollBy(0, this.lastVelocityY);
+        this.lastVelocityY *= this.settings.friction;
+        
+        this.animationFrameId = requestAnimationFrame(this.inertiaStep);
+    };
+}
+
+
+class DragToScrollSettingTab extends PluginSettingTab {
+	plugin: DragToScrollPlugin;
+
+	constructor(app: App, plugin: DragToScrollPlugin) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
+
+	display(): void {
+		const {containerEl} = this;
+		containerEl.empty();
+		containerEl.createEl('h2', {text: 'Drag to Scroll Settings'});
+
+		new Setting(containerEl)
+			.setName('Mouse button')
+			.setDesc('The mouse button used to initiate drag-to-scroll.')
+			.addDropdown(dropdown => dropdown
+				.addOption('0', 'Left Mouse Button')
+				.addOption('1', 'Middle Mouse Button')
+				.addOption('2', 'Right Mouse Button')
+				.setValue(String(this.plugin.settings.mouseButton))
+				.onChange(async (value) => {
+					this.plugin.settings.mouseButton = parseInt(value);
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Modifier key')
+			.setDesc('An optional modifier key that must be held down to enable drag-to-scroll.')
+			.addDropdown(dropdown => dropdown
+				.addOption('none', 'None')
+				.addOption('ctrl', 'Ctrl')
+				.addOption('shift', 'Shift')
+				.addOption('alt', 'Alt')
+				.setValue(this.plugin.settings.modifierKey)
+				.onChange(async (value: 'none' | 'ctrl' | 'shift' | 'alt') => {
+					this.plugin.settings.modifierKey = value;
+					await this.plugin.saveSettings();
+				}));
+        
+        // --- MODIFIED: Replaced .addText with .addSlider ---
+        new Setting(containerEl)
+            .setName('Inertia')
+            .setDesc("Controls the glide effect after release. Left side stops instantly, right side glides for a long time.")
+            .addSlider(slider => slider
+                .setLimits(0.80, 0.99, 0.01) // Min, Max, and Step
+                .setValue(this.plugin.settings.friction)
+                .setDynamicTooltip() // Shows the current value as you slide
+                .onChange(async (value) => {
+                    this.plugin.settings.friction = value;
+                    await this.plugin.saveSettings();
+                }));
+	}
 }
