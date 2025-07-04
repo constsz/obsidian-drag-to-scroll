@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS: DragToScrollSettings = {
     friction: 0.92,
 }
 
-// This is our main plugin class
+// Main plugin class
 export default class DragToScrollPlugin extends Plugin {
     settings: DragToScrollSettings;
 
@@ -175,7 +175,6 @@ class DragToScrollSettingTab extends PluginSettingTab {
 	display(): void {
 		const {containerEl} = this;
 		containerEl.empty();
-		containerEl.createEl('h2', {text: 'Drag to Scroll Settings'});
 
 		new Setting(containerEl)
 			.setName('Mouse button')
@@ -204,7 +203,6 @@ class DragToScrollSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
         
-        // --- MODIFIED: Replaced .addText with .addSlider ---
         new Setting(containerEl)
             .setName('Inertia')
             .setDesc("Controls the glide effect after release. Left side stops instantly, right side glides for a long time.")
