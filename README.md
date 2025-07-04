@@ -7,12 +7,9 @@ Only for Desktop (on mobile this is a basic functionality).
 
 <br/><br/>
 
----
+![Plugin Settings](./images/scrolling-demo.gif)
 
 <br/>
 
 ### Plugin Menu:
 ![Plugin Settings](./images/plugin-settings.png)
-
-### Demonstration:
-![Plugin Settings](./images/scrolling-demo.gif)
