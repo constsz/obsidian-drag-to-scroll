@@ -1,0 +1,8 @@
+/* 
+    Dynamic CSS used by the "drag-to-scroll" plugin.
+    This class is applied while the user is clicking and dragging,
+    changing the cursor from the default to a grabbing hand. 
+*/
+body.is-dragging-to-scroll {
+  cursor: grabbing !important;
+}

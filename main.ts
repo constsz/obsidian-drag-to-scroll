@@ -40,7 +40,7 @@ export default class DragToScrollPlugin extends Plugin {
 
     onunload() {
         console.log('Unloading Drag to Scroll plugin');
-        document.body.style.cursor = 'default';
+        document.body.classList.remove('is-dragging-to-scroll');
         this.stopInertiaScroll();
     }
 
@@ -97,7 +97,7 @@ export default class DragToScrollPlugin extends Plugin {
         if (!this.didDrag) {
             if (Math.abs(evt.clientY - this.startY) > this.DRAG_THRESHOLD) {
                 this.didDrag = true;
-                document.body.style.cursor = 'grabbing';
+                document.body.classList.add('is-dragging-to-scroll');
             }
         }
         
@@ -116,7 +116,7 @@ export default class DragToScrollPlugin extends Plugin {
         this.isDragging = false;
         
         if (this.didDrag) {
-            document.body.style.cursor = 'default';
+            document.body.classList.remove('is-dragging-to-scroll');
             this.startInertiaScroll();
         }
     };
