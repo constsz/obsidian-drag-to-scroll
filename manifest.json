@@ -1,7 +1,7 @@
 {
 	"id": "drag-to-scroll",
 	"name": "Drag To Scroll",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
 	"description": "Drag to scroll - just like on a touch device.",
 	"author": "Constantine Sazonov",
