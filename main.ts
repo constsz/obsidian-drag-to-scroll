@@ -30,8 +30,6 @@ export default class DragToScrollPlugin extends Plugin {
         await this.loadSettings();
         this.addSettingTab(new DragToScrollSettingTab(this.app, this));
 
-        console.log('Loading Drag to Scroll plugin');
-        
         this.registerDomEvent(document, 'mousedown', this.handleMouseDown);
         this.registerDomEvent(document, 'mousemove', this.handleMouseMove);
         this.registerDomEvent(document, 'mouseup', this.handleMouseUp);
@@ -39,7 +37,6 @@ export default class DragToScrollPlugin extends Plugin {
     }
 
     onunload() {
-        console.log('Unloading Drag to Scroll plugin');
         document.body.classList.remove('is-dragging-to-scroll');
         this.stopInertiaScroll();
     }
@@ -180,9 +177,9 @@ class DragToScrollSettingTab extends PluginSettingTab {
 			.setName('Mouse button')
 			.setDesc('The mouse button used to initiate drag-to-scroll.')
 			.addDropdown(dropdown => dropdown
-				.addOption('0', 'Left Mouse Button')
-				.addOption('1', 'Middle Mouse Button')
-				.addOption('2', 'Right Mouse Button')
+				.addOption('0', 'Left mouse button')
+				.addOption('1', 'Middle mouse button')
+				.addOption('2', 'Right mouse button')
 				.setValue(String(this.plugin.settings.mouseButton))
 				.onChange(async (value) => {
 					this.plugin.settings.mouseButton = parseInt(value);
